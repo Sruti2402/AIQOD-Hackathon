@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice AI Assistant</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            align-items: center;
+            background: linear-gradient(135deg, #000000, #000000);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #chat-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+        }
+
+        .message {
+            padding: 12px 18px;
+            margin-bottom: 15px;
+            border-radius: 25px;
+            max-width: 80%;
+            transition: transform 0.3s ease;
+            display: inline-block;
+            word-break: break-word;
+        }
+
+        .message:hover {
+            transform: translateY(-3px);
+        }
+
+        .user-message {
+            background-color: #353331;
+            align-self: flex-end;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .assistant-message {
+            background-color: #8e7878;
+            align-self: flex-start;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        #input-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
+
+        #user-input {
+            padding: 15px;
+            border: none;
+            border-radius: 30px;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            transition: background-color 0.3s ease;
+        }
+
+        #user-input:focus {
+            outline: none;
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        #listen-button {
+            width: 90px;
+            height: 90px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff9933, #ff3366);
+            color: #fff;
+            font-size: 2em;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #listen-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div id="chat-container"></div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="Type your message...">
+        <button id="listen-button">🎙️</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        const backendUrl = "http://127.0.0.1:5000/process_voice";  // Flask API URL
+
+function sendMessage(message) {
+    if (!message.trim()) return;
+
+    appendMessage(message, 'user-message');
+    userInput.value = '';
+
+    fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: message }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        appendMessage(data.response, 'assistant-message');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        appendMessage('Sorry, there was an error processing your request.', 'assistant-message');
+    });
+}
+
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 80, density: { enable: true, value_area: 800 } },
+                color: { value: '#ffffff' },
+                shape: { type: 'circle', stroke: { width: 0, color: '#000000' }, polygon: { nb_sides: 5 }, image: { src: 'img/github.svg', width: 100, height: 100 } },
+                opacity: { value: 0.5, random: true, anim: { enable: false, speed: 1, opacity_min: 0.1, sync: false } },
+                size: { value: 3, random: true, anim: { enable: false, speed: 40, size_min: 0.1, sync: false } },
+                line_linked: { enable: true, distance: 150, color: '#ffffff', opacity: 0.4, width: 1 },
+                move: { enable: true, speed: 3, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false, attract: { enable: false, rotateX: 600, rotateY: 1200 } }
+            },
+            interactivity: { detect_on: 'canvas', events: { onhover: { enable: true, mode: 'repulse' }, onclick: { enable: true, mode: 'push' }, resize: true }, modes: { grab: { distance: 400, line_linked: { opacity: 1 } }, bubble: { distance: 400, size: 40, duration: 2, opacity: 8, speed: 3 }, repulse: { distance: 200, duration: 0.4 }, push: { particles_nb: 4 }, remove: { particles_nb: 2 } } },
+            retina_detect: true
+        });
+
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const listenButton = document.getElementById('listen-button');
+
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+
+        listenButton.addEventListener('click', () => {
+            recognition.start();
+        });
+
+        recognition.onresult = (event) => {
+            const speechResult = event.results[0][0].transcript;
+            userInput.value = speechResult;
+            sendMessage(speechResult);
+        };
+
+        userInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage(userInput.value);
+            }
+        });
+
+        function sendMessage(message) {
+            if (!message.trim()) return;
+
+            appendMessage(message, 'user-message');
+            userInput.value = '';
+
+            const colabUrl = 'YOUR_GOOGLE_COLAB_PUBLIC_URL';
+
+            fetch(colabUrl + '/process_voice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage(data.response, 'assistant-message');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                appendMessage('Sorry, there was an error processing your request.', 'assistant-message');
+            });
+        }
+
+        function appendMessage(message, className) {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.classList.add('message', className);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
